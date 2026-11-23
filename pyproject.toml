@@ -1,0 +1,16 @@
+[project]
+name = "ionome-workspace"
+version = "0.1.0"
+description = "Repo workspace for Ionome API, analysis, core"
+requires-python = ">=3.13"
+dependencies = []
+
+[tool.uv.workspace]
+members = ["core", "analysis", "api"]
+
+[dependency-groups]
+dev = ["pytest", "httpx"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "tests"]   # core/, analysis/, api/ and the test helpers import from the repo root

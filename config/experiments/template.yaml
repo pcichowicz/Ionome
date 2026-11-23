@@ -1,0 +1,100 @@
+# Template for new studies, and the source of the default values the web form pre-fills (api/services/studies.py).
+# Options marked (standards_only) or (cohort_with_qc) are only read by that dataset profile; the other profile's
+# options may stay in the file, they are ignored. Unknown keys are rejected when the file is loaded, so a typo fails
+# immediately. Units: ppm = parts per million, sec = seconds, da = daltons.
+# Section order below follows the pipeline: detection -> alignment -> blank/adduct/purity -> library matching -> statistics.
+study:
+  id: ""                             # letters, digits, _ and - only; names the raw-data folder, the results folder and this study's YAML
+  polarity: ""                       # "negative" | "positive"
+  instrument: ""                     # free text, recorded in the report
+
+dataset_profile: "standards_only"   # "standards_only" | "cohort_with_qc"
+
+files:
+  sample_metadata: "_sample_metadata.csv" # should have same prefix as study.id
+
+system_suitability:                  # (standards_only)
+  ppm_tolerance: 5.0                 # allowed deviation between measured and expected m/z of each standard
+
+feature_detection:
+  mass_error_ppm: 5.0
+  peak_width: [10, 60]               # seconds; BOTH bounds are enforced
+  max_gaps: 2
+  min_scans: 2
+  noise_threshold: 8000.0
+  method: "chromatogram"             # "legacy" = previous apex-only picker (baseline runs)
+  noise_mode: "absolute"             # "adaptive": snr_threshold x each scan's median intensity
+  snr_threshold: 3.0
+  smoothing_points: 5
+  min_relative_prominence: 0.2
+  max_width_action: "drop"           # "keep" = only count peaks wider than peak_width[1]
+
+feature_alignment:                   # (cohort_with_qc)
+  alignment_mz_tolerance_ppm: 5.0
+  alignment_rt_tolerance_sec: 5.0
+  algorithm: "seeded"                # "legacy" = previous first-fit algorithm
+  rt_correction: true
+  reference_sample: null             # null = sample with the most features
+  gap_fill: true                     # fill features missing in a sample from its raw data
+
+blank_qc:                            # features also seen in solvent blanks are background
+  mz_tolerance_ppm: 5.0              # (standards_only)
+  rt_tolerance_sec: 5.0              # (standards_only)
+  blank_fold_threshold: 5.0          # (cohort_with_qc)
+
+adduct_annotation:                   # groups ions that are the same compound (e.g. [M-H]- and [M+Cl]-)
+  # (standards_only)
+  primary_adduct: "[M-H]-"
+  ppm_tolerance: 5.0
+  candidate_adducts:
+    - "[M-H]-"
+    - "[M+Cl]-"
+    - "[M+FA-H]-"
+    - "[2M-H]-"
+    - "[M+Na-2H]-"
+  # (cohort_with_qc)
+  cohort_mz_tolerance_ppm: 10.0
+  cohort_rt_tolerance_sec: 3.0
+  correlation_threshold: 0.75
+  cohort_method: "hypothesis"        # "legacy" = previous all-pairs implementation
+  cohort_adducts: null               # null = every supported adduct, or a list that includes "[M-H]-"
+  use_filled: true
+  log_correlation: true
+
+spectral_purity:                     # how clean the precursor isolation was: a mixed MS2 spectrum is a weak identification
+  isolation_window_da: 1.0           # width of the MS2 isolation window
+  min_purity: 0.7                    # (standards_only)
+  min_purity_high_confidence: 0.8    # (cohort_with_qc)
+  min_purity_tentative: 0.5          # (cohort_with_qc)
+
+library_matching:                    # compare MS2 spectra with a reference library
+  reference_library: ""              # name recorded in the report
+  reference_library_source: ""       # pre-built, downloaded - not built from raw files
+  reference_library_path: ""         # relative to the project base dir unless absolute
+  reference_library_format: "msp"    # or "mgf"
+  similarity_metric: "cosine"
+  precursor_mz_tolerance_ppm: 10.0
+  fragment_mz_tolerance_da: 0.02
+  min_match_score: 0.7
+  # (cohort_with_qc)
+  ms2_precursor_tolerance_da: 0.01
+  ms2_rt_tolerance_sec: 15.0         # null = no RT constraint on the MS2 scan
+  min_matched_peaks: 3
+  intensity_power: 0.5
+  remove_precursor: true
+  tie_margin: 0.02
+  min_ms2_spectra_for_peak: 2
+  library_qc: true
+  n_null_refs: 0                     # > 0 adds a chance p-value to each match (slower)
+
+statistics:                          # (cohort_with_qc)
+  normalization: "pqn"               # "none" to disable
+  presence_mode: "per_group"         # "global" = feature in >= min_presence_frac of ALL samples
+  min_presence_frac: 0.5
+  drop_blank_flagged: true
+  collapse_adduct_groups: true
+  max_qc_rsd: null                   # e.g. 30 drops features with QC RSD > 30 %
+  use_filled: true
+  test_method: "moderated"           # "welch" = previous test
+
+config_version: "v0.2"               # schema version of this file

@@ -1,0 +1,59 @@
+# Example: a standards-only study (profile standards_only): measured standards are checked and a reference library is
+# built from them. Copy this file to <study_id>.yaml, then change study.id and files.sample_metadata
+# (<study_id>_sample_metadata.csv, kept in the raw-data folder next to the raw files).
+# Every key is explained in template.yaml. Unknown keys are rejected when the file is loaded.
+study:
+  id: "example_standards"
+  polarity: "negative"
+  instrument: "Orbitrap"
+
+dataset_profile: "standards_only"     # "standards_only" | "cohort_with_qc"
+
+files:
+  sample_metadata: "example_standards_sample_metadata.csv"
+
+feature_detection:                   # both profiles
+  mass_error_ppm: 5.0
+  peak_width: [10, 60]               # seconds; BOTH bounds are enforced
+  max_gaps: 2
+  min_scans: 2
+  noise_threshold: 8000.0
+  method: "chromatogram"             # "legacy" = previous apex-only picker (baseline runs)
+  noise_mode: "absolute"             # "adaptive": snr_threshold x each scan's median intensity
+  snr_threshold: 3.0
+  smoothing_points: 5
+  min_relative_prominence: 0.2       # lower = split more, higher = merge more
+  max_width_action: "drop"           # "keep" = only count peaks wider than peak_width[1]
+
+system_suitability:                  # standards_only only
+  ppm_tolerance: 5.0
+
+blank_qc:
+  mz_tolerance_ppm: 5.0
+  rt_tolerance_sec: 5.0
+
+adduct_annotation:
+  primary_adduct: "[M-H]-"
+  ppm_tolerance: 5.0
+  candidate_adducts:
+    - "[M-H]-"
+    - "[M+Cl]-"
+    - "[M+FA-H]-"
+    - "[2M-H]-"
+    - "[M+Na-2H]-"
+
+spectral_purity:
+  isolation_window_da: 1.0
+  min_purity: 0.7
+
+library_matching:
+  reference_library: "EMBL-MCF"
+  reference_library_source: "curatr.mcf.embl.de/MS2/export"
+  reference_library_path: "reference_libraries/EMBL-MCF_negative.msp"   # relative to the project base dir unless absolute
+  reference_library_format: "msp"      # or "mgf"
+  similarity_metric: "cosine"
+  precursor_mz_tolerance_ppm: 10.0     # wider than feature_detection's: library precursor m/z is less precise
+  fragment_mz_tolerance_da: 0.02
+  min_match_score: 0.7
+
+config_version: "v0.2"

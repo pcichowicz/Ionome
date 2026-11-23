@@ -1,0 +1,84 @@
+# Example: a cohort study with pooled QC samples (profile cohort_with_qc). Copy this file to <study_id>.yaml, then change
+# study.id and files.sample_metadata (the sheet's name must match: <study_id>_sample_metadata.csv, kept in the raw-data
+# folder next to the raw files). Everything else can stay as it is until you have a reason to tune it.
+# Every key is explained in template.yaml; a "(standards_only)" option does nothing in this profile.
+# Unknown keys are rejected when the file is loaded, so a typo fails immediately.
+study:
+  id: "example_cohort"
+  polarity: "negative"
+  instrument: "Orbitrap"
+
+dataset_profile: "cohort_with_qc"     # "standards_only" | "cohort_with_qc"
+
+files:
+  sample_metadata: "example_cohort_sample_metadata.csv"
+
+feature_detection:                   # both profiles
+  mass_error_ppm: 5.0
+  peak_width: [10, 60]               # seconds; BOTH bounds are enforced
+  max_gaps: 2
+  min_scans: 2
+  noise_threshold: 8000.0
+  method: "chromatogram"             # "legacy" = previous apex-only picker (baseline runs)
+  noise_mode: "absolute"             # "adaptive": snr_threshold x each scan's median intensity
+  snr_threshold: 3.0
+  smoothing_points: 5
+  min_relative_prominence: 0.2       # lower = split more, higher = merge more
+  max_width_action: "drop"           # "keep" = only count peaks wider than peak_width[1]
+
+feature_alignment:                   # cohort_with_qc only
+  alignment_mz_tolerance_ppm: 5.0
+  alignment_rt_tolerance_sec: 5.0    # safe at this width because RT correction is on
+  algorithm: "seeded"                # "legacy" = previous first-fit algorithm
+  rt_correction: true
+  reference_sample: null             # null = sample with the most features
+  gap_fill: true
+
+blank_qc:
+  blank_fold_threshold: 5.0          # cohort: a feature is background if no sample exceeds blank x this
+
+adduct_annotation:
+  cohort_mz_tolerance_ppm: 10.0
+  cohort_rt_tolerance_sec: 3.0
+  correlation_threshold: 0.75
+  cohort_method: "hypothesis"        # "legacy" = previous all-pairs implementation
+  cohort_adducts: null               # null = every supported adduct, or a list that includes "[M-H]-"
+  use_filled: true
+  log_correlation: true
+
+spectral_purity:
+  isolation_window_da: 1.0
+  min_purity_high_confidence: 0.8
+  min_purity_tentative: 0.5
+
+statistics:
+  normalization: "pqn"               # "none" to disable
+  presence_mode: "per_group"         # "global" = feature in >= min_presence_frac of ALL samples
+  min_presence_frac: 0.5
+  drop_blank_flagged: true
+  collapse_adduct_groups: true
+  max_qc_rsd: null                   # e.g. 30 drops features with QC RSD > 30 %
+  use_filled: true
+  test_method: "moderated"           # "welch" = previous test
+
+library_matching:
+  reference_library: "EMBL-MCF"
+  reference_library_source: "curatr.mcf.embl.de/MS2/export"
+  reference_library_path: "reference_libraries/EMBL-MCF_negative.msp"   # relative to the project base dir unless absolute
+  reference_library_format: "msp"      # or "mgf"
+  similarity_metric: "cosine"
+  precursor_mz_tolerance_ppm: 10.0     # wider than feature_detection's: library precursor m/z is less precise
+  fragment_mz_tolerance_da: 0.02
+  min_match_score: 0.7
+  # cohort_with_qc only
+  ms2_precursor_tolerance_da: 0.01
+  ms2_rt_tolerance_sec: 15.0           # null = no RT constraint on the MS2 scan
+  min_matched_peaks: 3
+  intensity_power: 0.5
+  remove_precursor: true
+  tie_margin: 0.02
+  min_ms2_spectra_for_peak: 2
+  library_qc: true
+  n_null_refs: 0                       # > 0 adds a chance p-value to each match (slower)
+
+config_version: "v0.2"
